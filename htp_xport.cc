@@ -16,6 +16,8 @@
 #include <list>
 #include <dirent.h>
 #include <algorithm>
+#include <my_alloc.h>
+#include <m_ctype.h>
 
 #include "mysql.h"
 using namespace std;
@@ -32,9 +34,9 @@ typedef enum port_op port_op_t;
 static MYSQL mysql;            /* The connection */
 static MEM_ROOT hash_mem_root; /* memory object */
 
-static my_bool connected = 0;
+static bool connected = 0;
 static const CHARSET_INFO *charset_info = &my_charset_latin1;
-static my_bool tty_password = 0;
+static bool tty_password = 0;
 //args
 static char *opt_host = NULL;
 static uint opt_mysql_port = 0;
@@ -155,14 +157,14 @@ static void usage(int version)
     turn them off text won't show up.
     This is safe to do since it's followed by a call to exit().
   */
-  for (struct my_option *optp = my_long_options; optp->name; optp++)
+/*  for (struct my_option *optp = my_long_options; optp->name; optp++)
   {
     if (optp->id == OPT_SECURE_AUTH)
     {
       optp->def_value = 0;
       break;
     }
-  }
+  }*/
   my_print_help(my_long_options);
   //  print_defaults("my", load_default_groups);
   my_print_variables(my_long_options);
@@ -208,9 +210,9 @@ get_option_tables(const char *tables)
   }
   }*/
 
-my_bool
+bool
 get_one_option(int optid, const struct my_option *opt MY_ATTRIBUTE((unused)),
-               char *argument)
+               char *argument __attribute__((unused)))
 {
   switch (optid)
   {
@@ -266,7 +268,7 @@ stop_for_dbg()
 }
 
 static void
-init_connection_options(MYSQL *mysql)
+init_connection_options(MYSQL *mysql __attribute__((unused)))
 {
   /*  my_bool handle_expired= (opt_connect_expired_password || !status.batch) ?
     TRUE : FALSE;
@@ -554,8 +556,9 @@ bool get_databases()
   return succ;
 }
 bool
-export_check(string *err)
+export_check(string *err __attribute__((unused)))
 {
+  // todo
   return true;
 }
 
@@ -771,7 +774,7 @@ export_single_table(const string &db_name, const string &table_name)
 }
 
 bool
-export_tables(string *err, const string db_name)
+export_tables(string *err __attribute__((unused)), const string db_name)
 {
   FILE *fstream;
   list<char *>::iterator iter;
@@ -930,7 +933,7 @@ do_export(const bool slave_flag)
 }
 
 bool
-import_check(string *err)
+import_check(string *err __attribute__((unused)))
 {
   return true;
 }
@@ -967,7 +970,7 @@ table_buffer_t file_table_buffer;
 list<char *> file_tables;
 
 bool
-import_get_file_tables(const string db_name, string *err)
+import_get_file_tables(const string db_name, string *err __attribute__((unused)))
 {
   int table_count = 0;
   file_tables.clear();
@@ -996,7 +999,7 @@ import_get_file_tables(const string db_name, string *err)
   return true;
 }
 
-bool import_get_file_databases(string *err)
+bool import_get_file_databases(string *err __attribute__((unused)))
 {
   database_buffer.number = 1;
   databases.clear();
