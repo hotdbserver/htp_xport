@@ -20,7 +20,7 @@
 #include "mysql.h"
 using namespace std;
 
-//operation of 
+//operation of
 enum port_op
 {
   OP_INVALID = 0,
@@ -151,7 +151,7 @@ static void usage(int version)
   puts(HTP_WELCOME_COPYRIGHT_NOTICE("2013"));
   cout << "Usage: " << my_progname << " [OPTIONS] [database]" << endl;
   /*
-    Turn default for zombies off so that the help on how to 
+    Turn default for zombies off so that the help on how to
     turn them off text won't show up.
     This is safe to do since it's followed by a call to exit().
   */
@@ -394,7 +394,7 @@ sql_real_connect(const char *host, const char *user, const char *password)
     uint dummy_errors;
     /*
       Don't convert trailing '\n' character - it was appended during
-      last batch_readline_command() call. 
+      last batch_readline_command() call.
       Oherwise we'll get an extra line, which makes some tests fail.
     */
     if (status.line_buff->buffer[len - 1] == '\n')
@@ -432,7 +432,7 @@ sql_connect()
     {
       if (try_count > MAX_RECONNECT_TIME)
       {
-        cout << "fail to connect, try " << MAX_RECONNECT_TIME << " times!" << mysql_error(&mysql);
+        cout << "fail to connect, try " << MAX_RECONNECT_TIME << " times!" << mysql_error(&mysql) << endl;
         exit(-1);
       }
       try_count++;
@@ -561,6 +561,14 @@ export_check(string *err)
 
 static int export_show_master_status(string *err)
 {
+  sprintf(buffer, "%s/master.info", opt_file_dir);
+  FILE *master_info = fopen(buffer, "w+");
+  if (master_info == NULL)
+  {
+    err->append("Can not open file.");
+    return false;
+  }
+
   MYSQL_ROW row;
   MYSQL_RES *result;
   mysql_query(&mysql, "SHOW MASTER STATUS");
@@ -569,8 +577,6 @@ static int export_show_master_status(string *err)
     err->append(mysql_error(&mysql));
     return false;
   }
-  sprintf(buffer, "%s/master.info", opt_file_dir);
-  FILE *master_info = fopen(buffer, "w+");
   row = mysql_fetch_row(result);
   if (row && row[0] && row[1])
   {
@@ -632,12 +638,38 @@ static bool export_flush_tables_with_read_lock(string *err, int is_slave_flag)
     return false;
   }
 
-  r = mysql_query(&mysql, "set global super_read_only=1;");
-  if (r != 0)
+
+  r = mysql_query(&mysql, "select version();");
+  if (r != 0) {
+    err->append(mysql_error(&mysql));
+    return false;
+  }
+  MYSQL_RES *res = mysql_store_result(&mysql);
+  if (res)
+  {
+    if (mysql_num_rows(res))
+    {
+      MYSQL_ROW row = mysql_fetch_row(res);
+      char *mysql_version = strdup_root(&hash_mem_root, (char *)row[0]);
+      if (!(mysql_version[0] == '5' && mysql_version[2] == '6'))
+      {
+        r = mysql_query(&mysql, "set global super_read_only=1;");
+        if (r != 0)
+        {
+          err->append(mysql_error(&mysql));
+          return false;
+        }
+      }
+    }
+    mysql_free_result(res);
+  }
+  else
   {
     err->append(mysql_error(&mysql));
     return false;
   }
+
+
   if (is_slave_flag)
   {
     r = mysql_query(&mysql, "stop slave;");
@@ -906,9 +938,9 @@ import_check(string *err)
 bool import_mk_db(const string &db_name)
 {
   MYSQL_RES *result = NULL;
-  string cmd = " show databases like '%";
+  string cmd = " show databases like '";
   cmd += db_name;
-  cmd += "%';";
+  cmd += "';";
   mysql_query(&mysql, cmd.c_str());
   result = mysql_store_result(&mysql);
   if ((result != NULL) && (result->row_count != 0))
