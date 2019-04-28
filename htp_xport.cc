@@ -891,12 +891,14 @@ do_export(const bool slave_flag)
   succ = export_flush_tables_with_read_lock(&err, slave_flag);
   if (!succ)
   {
+    cout << err << endl;
     cout << " Flush tables with read lock error, please check manully!" << endl;
     return false;
   }
   succ = export_show_master_status(&err);
   if (!succ)
   {
+    cout << err << endl;
     cout << " Show master status error, please check manully!" << endl;
     return false;
   }
