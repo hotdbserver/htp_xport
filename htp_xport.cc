@@ -1081,6 +1081,7 @@ import_single_table(const string &db_name, const char *table_name)
     int r = 0;
     sprintf(buffer, "%s/%s%s", opt_file_dir_fi.c_str(), table_name, ".def");
     FILE *f = fopen(buffer, "r");
+    memset(buffer, 0, sizeof(buffer));
     fread(buffer, 1, sizeof(buffer), f);
     fclose(f);
     r = mysql_query(&mysql, buffer);
@@ -1205,7 +1206,10 @@ do_import(const int slave_flag)
   list<char *>::iterator iter;
   succ = import_get_file_databases(&err);
   if (!succ)
+  {
+    cout << err << endl;
     return false;
+  }
 
   iter = databases.begin();
   string para_dbname;
@@ -1218,10 +1222,16 @@ do_import(const int slave_flag)
       return false;
     succ = import_get_file_tables(para_dbname, &err);
     if (!succ)
+    {
+      cout << err << endl;
       return false;
+    }
     succ = import_tables(para_dbname, &err);
     if (!succ)
+    {
+      cout << err << endl;
       return false;
+    }
     iter++;
   }
   succ = import_start_binlog_repl();
