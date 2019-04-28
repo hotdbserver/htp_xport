@@ -987,8 +987,10 @@ import_get_file_tables(const string db_name, string *err)
     //printf("%s\n",ptr->d_name);
     if (strstr(ptr->d_name, ".def") != NULL)
     {
+   //   cout << "Got table name : " << ptr->d_name << endl;
       int len = strlen(ptr->d_name);
       strncpy(file_table_buffer.tables[table_count].name, ptr->d_name, len - 4);
+      file_table_buffer.tables[table_count].name[len - 4] = '\0'; 
       table_buffer.number++;
       file_tables.push_back(file_table_buffer.tables[table_count].name);
       table_count++;
