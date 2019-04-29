@@ -445,6 +445,12 @@ sql_connect()
   return 0;
 }
 
+static int
+dis_connect()
+{
+  mysql_close(&mysql);
+}
+
 //tables to export or import。
 //该list保存的内容分两种情况，当未指定导入/导出表时，该列表保存的是database中
 //的表，全部进行导出/导入。如果指定指定倒入导出表时，则记录指定的表
@@ -1311,20 +1317,27 @@ int main(int argc, char *argv[])
   if (is_slave == -1)
   {
     cout << "Executing SQL error!" << endl;
+    dis_connect();
     exit(1);
   }
   if (strcasecmp(opt_op, "export") == 0)
   {
     succ = do_export(is_slave);
     if (!succ)
+    {
+      dis_connect();
       exit(1);
+    }
   }
   else
   {
     succ = do_import(is_slave);
     if (!succ)
+    {
+      dis_connect();
       exit(1);
+    }
   }
-
+  dis_connect(); 
   return 0;
 }
