@@ -625,6 +625,16 @@ static bool export_flush_tables_with_read_lock(string *err, int is_slave_flag)
     锁定数据库，确保数据的一致性
   */
 
+  if (is_slave_flag)
+  {
+    r = mysql_query(&mysql, "stop slave;");
+    if (r != 0)
+    {
+      err->append(mysql_error(&mysql));
+      return false;
+    }
+  }
+
   int r = mysql_query(&mysql, "FLUSH TABLES");
   if (r != 0)
   {
@@ -673,17 +683,6 @@ static bool export_flush_tables_with_read_lock(string *err, int is_slave_flag)
   {
     err->append(mysql_error(&mysql));
     return false;
-  }
-
-
-  if (is_slave_flag)
-  {
-    r = mysql_query(&mysql, "stop slave;");
-    if (r != 0)
-    {
-      err->append(mysql_error(&mysql));
-      return false;
-    }
   }
   return true;
 }
