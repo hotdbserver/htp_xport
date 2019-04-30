@@ -449,6 +449,7 @@ static int
 dis_connect()
 {
   mysql_close(&mysql);
+  return 0;
 }
 
 //tables to export or import。
@@ -624,6 +625,7 @@ static bool export_flush_tables_with_read_lock(string *err, int is_slave_flag)
     flush tables with read lock
     锁定数据库，确保数据的一致性
   */
+  int r = 0;
 
   if (is_slave_flag)
   {
@@ -635,7 +637,7 @@ static bool export_flush_tables_with_read_lock(string *err, int is_slave_flag)
     }
   }
 
-  int r = mysql_query(&mysql, "FLUSH TABLES");
+  r = mysql_query(&mysql, "FLUSH TABLES");
   if (r != 0)
   {
     err->append(mysql_error(&mysql));
