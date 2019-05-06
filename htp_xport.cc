@@ -444,7 +444,12 @@ sql_connect()
   }
   return 0;
 }
-
+static int
+dis_connect()
+{
+  mysql_close(&mysql);
+   return 0;
+}
 //tables to export or import。
 //该list保存的内容分两种情况，当未指定导入/导出表时，该列表保存的是database中
 //的表，全部进行导出/导入。如果指定指定倒入导出表时，则记录指定的表
@@ -618,8 +623,18 @@ static bool export_flush_tables_with_read_lock(string *err, int is_slave_flag)
     flush tables with read lock
     锁定数据库，确保数据的一致性
   */
+  int r = 0;
 
-  int r = mysql_query(&mysql, "FLUSH TABLES");
+  if (is_slave_flag)
+  {
+    r = mysql_query(&mysql, "stop slave;");
+    if (r != 0)
+    {
+      err->append(mysql_error(&mysql));
+      return false;
+    }
+  }
+   r = mysql_query(&mysql, "FLUSH TABLES");
   if (r != 0)
   {
     err->append(mysql_error(&mysql));
@@ -669,17 +684,6 @@ static bool export_flush_tables_with_read_lock(string *err, int is_slave_flag)
   }
 
 
-
-
-  if (is_slave_flag)
-  {
-    r = mysql_query(&mysql, "stop slave;");
-    if (r != 0)
-    {
-      err->append(mysql_error(&mysql));
-      return false;
-    }
-  }
   return true;
 }
 
@@ -892,12 +896,14 @@ do_export(const bool slave_flag)
   succ = export_flush_tables_with_read_lock(&err, slave_flag);
   if (!succ)
   {
+    cout << err << endl;
     cout << " Flush tables with read lock error, please check manully!" << endl;
     return false;
   }
   succ = export_show_master_status(&err);
   if (!succ)
   {
+    cout << err << endl;
     cout << " Show master status error, please check manully!" << endl;
     return false;
   }
@@ -986,8 +992,10 @@ import_get_file_tables(const string db_name, string *err)
     //printf("%s\n",ptr->d_name);
     if (strstr(ptr->d_name, ".def") != NULL)
     {
+      //   cout << "Got table name : " << ptr->d_name << endl;
       int len = strlen(ptr->d_name);
       strncpy(file_table_buffer.tables[table_count].name, ptr->d_name, len - 4);
+      file_table_buffer.tables[table_count].name[len - 4] = '\0'; 
       table_buffer.number++;
       file_tables.push_back(file_table_buffer.tables[table_count].name);
       table_count++;
@@ -1080,6 +1088,7 @@ import_single_table(const string &db_name, const char *table_name)
     int r = 0;
     sprintf(buffer, "%s/%s%s", opt_file_dir_fi.c_str(), table_name, ".def");
     FILE *f = fopen(buffer, "r");
+    memset(buffer, 0, sizeof(buffer));
     fread(buffer, 1, sizeof(buffer), f);
     fclose(f);
     r = mysql_query(&mysql, buffer);
@@ -1204,7 +1213,10 @@ do_import(const int slave_flag)
   list<char *>::iterator iter;
   succ = import_get_file_databases(&err);
   if (!succ)
+ {
+    cout << err << endl;
     return false;
+ }
 
   iter = databases.begin();
   string para_dbname;
@@ -1217,10 +1229,16 @@ do_import(const int slave_flag)
       return false;
     succ = import_get_file_tables(para_dbname, &err);
     if (!succ)
+     {
+      cout << err << endl;
       return false;
+     }
     succ = import_tables(para_dbname, &err);
     if (!succ)
+    {
+      cout << err << endl;
       return false;
+    }
     iter++;
   }
   succ = import_start_binlog_repl();
@@ -1298,20 +1316,27 @@ int main(int argc, char *argv[])
   if (is_slave == -1)
   {
     cout << "Executing SQL error!" << endl;
+    dis_connect();
     exit(1);
   }
   if (strcasecmp(opt_op, "export") == 0)
   {
     succ = do_export(is_slave);
     if (!succ)
+   {
+      dis_connect();
       exit(1);
+   }
   }
   else
   {
     succ = do_import(is_slave);
     if (!succ)
+   {
+      dis_connect();
       exit(1);
+   }
   }
-
+  dis_connect();
   return 0;
 }
