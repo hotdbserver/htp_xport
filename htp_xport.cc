@@ -446,7 +446,7 @@ sql_connect()
   }
   return 0;
 }
-tatic int
+static int
 dis_connect()
 {
   mysql_close(&mysql);
